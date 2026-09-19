@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="card p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2 class="mb-1">Driver Applications</h2>
+            <p class="text-muted mb-0">Admin-only approval dashboard</p>
+        </div>
+    </div>
+
+    {% if applications %}
+        <div class="accordion" id="applicationsAccordion">
+            {% for application in applications %}
+                <div class="accordion-item mb-3 border rounded">
+                    <h2 class="accordion-header" id="heading-{{ application.id }}">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ application.id }}" aria-expanded="false" aria-controls="collapse-{{ application.id }}">
+                            <div class="d-flex justify-content-between align-items-center w-100 gap-3 me-3">
+                                <span><strong>{{ application.application_reference }}</strong></span>
+                                <span class="badge bg-secondary">{{ application.get_status_display }}</span>
+                                <span>{{ application.driver.email }}</span>
+                            </div>
+                        </button>
+                    </h2>
+                    <div id="collapse-{{ application.id }}" class="accordion-collapse collapse" aria-labelledby="heading-{{ application.id }}" data-bs-parent="#applicationsAccordion">
+                        <div class="accordion-body">
+                            <div class="row g-4">
+                                <div class="col-md-6">
+                                    <h6 class="fw-bold">Applicant information</h6>
+                                    <p class="mb-1"><strong>Name:</strong> {{ application.driver.first_name }} {{ application.driver.last_name }}</p>
+                                    <p class="mb-1"><strong>Email:</strong> {{ application.driver.email }}</p>
+                                    <p class="mb-1"><strong>Phone:</strong> {{ application.driver.phone_number|default:'Not provided' }}</p>
+                                    <p class="mb-1"><strong>Submitted:</strong> {{ application.submitted_at|date:'M d, Y H:i' }}</p>
+                                    <p class="mb-1"><strong>Reference:</strong> {{ application.application_reference }}</p>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <h6 class="fw-bold">Profile details</h6>
+                                    {% with profile=application.driver.driver_profile %}
+                                        {% if profile %}
+                                            <p class="mb-1"><strong>Residential address:</strong> {{ profile.residential_address|default:'Not provided' }}</p>
+                                            <p class="mb-1"><strong>City:</strong> {{ profile.city|default:'Not provided' }}</p>
+                                            <p class="mb-1"><strong>Province:</strong> {{ profile.province|default:'Not provided' }}</p>
+                                            <p class="mb-1"><strong>Nationality:</strong> {{ profile.nationality|default:'Not provided' }}</p>
+                                            <p class="mb-1"><strong>Emergency contact:</strong> {{ profile.emergency_contact_name|default:'Not provided' }}</p>
+                                        {% else %}
+                                            <p class="text-muted mb-0">No personal profile details available.</p>
+                                        {% endif %}
+                                    {% endwith %}
+                                </div>
+
+                                <div class="col-md-6">
+                                    <h6 class="fw-bold">Identity verification</h6>
+                                    <p class="mb-1"><strong>Document type:</strong> {{ application.identity_document_type|default:'Not provided' }}</p>
+                                    <p class="mb-1"><strong>Document number:</strong> {{ application.identity_document_number|default:'Not provided' }}</p>
+                                    <p class="mb-1"><strong>Issue date:</strong> {{ application.issue_date|date:'M d, Y'|default:'Not provided' }}</p>
+                                    <p class="mb-1"><strong>Expiry date:</strong> {{ application.expiry_date|date:'M d, Y'|default:'Not provided' }}</p>
+                                    {% if application.identity_document_file %}
+                                        <a href="{{ application.identity_document_file.url }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary mt-2">Open identity document</a>
+                                    {% else %}
+                                        <p class="text-muted mb-0">No identity document uploaded.</p>
+                                    {% endif %}
+                                </div>
+
+                                <div class="col-md-6">
+                                    <h6 class="fw-bold">Vehicle details</h6>
+                                    {% if application.vehicle %}
+                                        <p class="mb-1"><strong>Vehicle:</strong> {{ application.vehicle.make }} {{ application.vehicle.model }}</p>
+                                        <p class="mb-1"><strong>Type:</strong> {{ application.vehicle.get_vehicle_type_display }}</p>
+                                        <p class="mb-1"><strong>Year:</strong> {{ application.vehicle.year }}</p>
+                                        <p class="mb-1"><strong>Colour:</strong> {{ application.vehicle.colour }}</p>
+                                        <p class="mb-1"><strong>Registration:</strong> {{ application.vehicle.registration_number }}</p>
+                                        <p class="mb-1"><strong>VIN:</strong> {{ application.vehicle.vin_chassis_number }}</p>
+                                    {% else %}
+                                        <p class="text-muted mb-0">No vehicle details added.</p>
+                                    {% endif %}
+                                </div>
+
+                                <div class="col-12">
+                                    <h6 class="fw-bold">Uploaded driver documents</h6>
+                                    {% if application.driver_documents.exists %}
+                                        <ul class="list-group list-group-flush">
+                                            {% for document in application.driver_documents.all %}
+                                                <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                                    <span>{{ document.document_type }}</span>
+                                                    <a href="{{ document.file.url }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">View</a>
+                                                </li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        <p class="text-muted mb-0">No driver documents uploaded.</p>
+                                    {% endif %}
+                                </div>
+
+                                <div class="col-12">
+                                    <h6 class="fw-bold">Uploaded vehicle documents</h6>
+                                    {% if application.vehicle and application.vehicle.documents.exists %}
+                                        <ul class="list-group list-group-flush">
+                                            {% for document in application.vehicle.documents.all %}
+                                                <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                                    <span>{{ document.document_type }}</span>
+                                                    <a href="{{ document.file.url }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">View</a>
+                                                </li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        <p class="text-muted mb-0">No vehicle documents uploaded.</p>
+                                    {% endif %}
+                                </div>
+
+                                <div class="col-12">
+                                    <form method="post" class="border rounded p-3 bg-light">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="application_id" value="{{ application.id }}">
+                                        <label for="review-notes-{{ application.id }}" class="form-label"><strong>Review notes</strong></label>
+                                        <textarea id="review-notes-{{ application.id }}" name="review_notes" class="form-control mb-3" rows="3" placeholder="Write approval or rejection feedback for the applicant..."></textarea>
+                                        <div class="d-flex gap-2 flex-wrap">
+                                            <button type="submit" name="decision" value="APPROVED" class="btn btn-success">Approve</button>
+                                            <button type="submit" name="decision" value="REJECTED" class="btn btn-danger">Reject</button>
+                                            <button type="submit" name="decision" value="DELETE" class="btn btn-outline-danger" onclick="return confirm('Delete this applicant and all related application details?');">Delete</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">No submitted applications are waiting for admin review.</div>
+    {% endif %}
+</div>
+{% endblock %}

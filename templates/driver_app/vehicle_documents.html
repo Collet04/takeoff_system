@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="card p-4">
+    <div class="progress-indicator">
+        <span class="step-dot complete"></span> Account
+        <span class="step-dot complete"></span> Personal
+        <span class="step-dot complete"></span> Identity
+        <span class="step-dot complete"></span> Vehicle
+        <span class="step-dot complete"></span> Driver Documents
+        <span class="step-dot active"></span> Vehicle Documents
+    </div>
+    <h2>Vehicle Documents</h2>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="row g-3">
+            {% for field in form %}
+            <div class="col-md-6">
+                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.errors %}<div class="text-danger small">{{ field.errors|join:', ' }}</div>{% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        <div class="mt-4 d-flex gap-2">
+            <button type="submit" class="btn btn-primary">Upload Document</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

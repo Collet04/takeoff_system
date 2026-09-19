@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="TakeOFF favicon">
+  <defs>
+    <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#0ea5e9"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="26" fill="#0f172a"/>
+  <path d="M30 86c18-28 36-42 68-48-8 10-15 20-22 29 13 4 24 11 31 20-17 4-33 7-50 7-10 0-19-2-27-8z" fill="url(#g)"/>
+  <path d="M44 83l16-47h13l-16 47H44zm18-19h14l-7 21H55l7-21z" fill="#f8fafc"/>
+</svg>

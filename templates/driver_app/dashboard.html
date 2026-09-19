@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card p-4">
+            <h2 class="mb-3">Welcome, {{ user.first_name|default:user.email }}</h2>
+            <h4>Driver Application</h4>
+            <div class="row mt-3">
+                <div class="col-md-4"><strong>Application Reference</strong><br>{{ application.application_reference }}</div>
+                <div class="col-md-4"><strong>Status</strong><br>{{ application.status }}</div>
+                <div class="col-md-4"><strong>Progress</strong><br>{{ progress }} of 6 steps completed</div>
+            </div>
+            <div class="mt-4">
+                <ul class="list-group">
+                    <li class="list-group-item">✓ Account</li>
+                    <li class="list-group-item">✓ Personal Details</li>
+                    <li class="list-group-item">✓ Identity</li>
+                    <li class="list-group-item">✓ Vehicle</li>
+                    <li class="list-group-item">○ Driver Documents</li>
+                    <li class="list-group-item">○ Vehicle Documents</li>
+                    <li class="list-group-item">○ Review</li>
+                </ul>
+            </div>
+            <div class="mt-4 d-flex flex-wrap gap-2">
+                <a href="{% url 'personal_details' %}" class="btn btn-primary">Continue Application</a>
+                <a href="{% url 'application_status' %}" class="btn btn-outline-secondary">View Application Status</a>
+                {% if user.is_staff or user.is_superuser %}
+                    <a href="{% url 'admin_driver_applications' %}" class="btn btn-outline-primary">Admin Review Board</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

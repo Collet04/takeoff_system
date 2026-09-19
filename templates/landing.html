@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="card p-4 p-lg-5">
+            <div class="text-center mb-4">
+                <span class="badge bg-primary-subtle text-primary mb-3">Driver onboarding</span>
+                <h1 class="display-6 fw-bold">Start your TakeOFF driver application</h1>
+                <p class="text-muted">Create your account, verify your identity, and complete your onboarding in a few simple steps.</p>
+            </div>
+            <div class="d-grid gap-3 d-md-flex justify-content-center">
+                <a href="{% url 'signup' %}" class="btn btn-primary btn-lg">Create Account</a>
+                <a href="{% url 'login' %}" class="btn btn-outline-primary btn-lg">Sign In</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

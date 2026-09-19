@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="card p-4 text-center">
+            <h2>Application Submitted</h2>
+            <p>Your TakeOFF driver application has been successfully submitted.</p>
+            <div class="alert alert-light border mt-3">
+                <strong>Application Reference</strong><br>
+                <h3>{{ application.application_reference }}</h3>
+            </div>
+            <p><strong>Status:</strong> UNDER REVIEW</p>
+            <a href="{% url 'application_status' %}" class="btn btn-primary">View Application Status</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
