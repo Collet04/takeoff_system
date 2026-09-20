@@ -33,6 +33,60 @@ def is_admin_user(user):
     return bool(user and (user.is_staff or user.is_superuser))
 
 
+STEP_SEQUENCE = [
+    {'key': 'account', 'label': 'Account', 'url_name': 'dashboard'},
+    {'key': 'personal_details', 'label': 'Personal', 'url_name': 'personal_details'},
+    {'key': 'identity_verification', 'label': 'Identity', 'url_name': 'identity_verification'},
+    {'key': 'vehicle_details', 'label': 'Vehicle', 'url_name': 'vehicle_details'},
+    {'key': 'driver_documents', 'label': 'Driver Documents', 'url_name': 'driver_documents'},
+    {'key': 'vehicle_documents', 'label': 'Vehicle Documents', 'url_name': 'vehicle_documents'},
+    {'key': 'review_application', 'label': 'Review', 'url_name': 'review_application'},
+]
+
+
+def get_application_step_status(application, user):
+    profile = getattr(user, 'driver_profile', None)
+    vehicle = getattr(application, 'vehicle', None)
+    driver_documents = list(getattr(application, 'driver_documents', []).all())
+    vehicle_documents = list(getattr(vehicle, 'documents', []).all()) if vehicle else []
+
+    return {
+        'account': True,
+        'personal_details': bool(profile and profile.first_name and profile.last_name),
+        'identity_verification': bool(application.identity_document_type and application.identity_document_number),
+        'vehicle_details': bool(vehicle and vehicle.vehicle_type),
+        'driver_documents': bool(driver_documents),
+        'vehicle_documents': bool(vehicle_documents),
+        'review_application': application.status in [
+            DriverApplication.STATUS_SUBMITTED,
+            DriverApplication.STATUS_UNDER_REVIEW,
+            DriverApplication.STATUS_APPROVED,
+            DriverApplication.STATUS_REJECTED,
+        ],
+    }
+
+
+def build_step_navigation(current_step):
+    current_index = next((index for index, step in enumerate(STEP_SEQUENCE) if step['key'] == current_step), 0)
+    steps = []
+
+    for step in STEP_SEQUENCE:
+        status = get_application_step_status(get_application_for_user(step['url_name'] if False else None), None) if False else {}
+        steps.append({
+            'key': step['key'],
+            'label': step['label'],
+            'url_name': step['url_name'],
+            'completed': False,
+        })
+
+    return {
+        'step_map': STEP_SEQUENCE,
+        'current_step': current_step,
+        'previous_step': STEP_SEQUENCE[current_index - 1] if current_index > 0 else None,
+        'next_step': STEP_SEQUENCE[current_index + 1] if current_index < len(STEP_SEQUENCE) - 1 else None,
+    }
+
+
 # Pylance can misread Django reverse relations as missing; these local aliases keep the
 # access pattern explicit without changing runtime behavior.
 DriverDocuments = Any
@@ -57,6 +111,8 @@ def dashboard(request):
         'profile': profile,
         'application': application,
         'progress': application.progress_steps if application else 0,
+        'step_status': get_application_step_status(application, request.user),
+        'step_map': STEP_SEQUENCE,
     }
     return render(request, 'driver_app/dashboard.html', context)
 
@@ -83,7 +139,23 @@ def personal_details_view(request):
     else:
         form = DriverProfileForm(instance=profile)
 
-    return render(request, 'driver_app/personal_details.html', {'form': form, 'application': application})
+    step_status = get_application_step_status(application, request.user)
+    current_step = 'personal_details'
+    step_navigation = {
+        'step_map': [
+            {'key': 'account', 'label': 'Account', 'url_name': 'dashboard', 'completed': True},
+            {'key': 'personal_details', 'label': 'Personal', 'url_name': 'personal_details', 'completed': step_status['personal_details']},
+            {'key': 'identity_verification', 'label': 'Identity', 'url_name': 'identity_verification', 'completed': step_status['identity_verification']},
+            {'key': 'vehicle_details', 'label': 'Vehicle', 'url_name': 'vehicle_details', 'completed': step_status['vehicle_details']},
+            {'key': 'driver_documents', 'label': 'Driver Documents', 'url_name': 'driver_documents', 'completed': step_status['driver_documents']},
+            {'key': 'vehicle_documents', 'label': 'Vehicle Documents', 'url_name': 'vehicle_documents', 'completed': step_status['vehicle_documents']},
+            {'key': 'review_application', 'label': 'Review', 'url_name': 'review_application', 'completed': step_status['review_application']},
+        ],
+        'current_step': current_step,
+        'previous_step': None,
+        'next_step': {'key': 'identity_verification', 'url_name': 'identity_verification'},
+    }
+    return render(request, 'driver_app/personal_details.html', {'form': form, 'application': application, 'step_status': step_status, 'step_map': step_navigation['step_map'], 'current_step': current_step, 'previous_step': None, 'next_step': step_navigation['next_step']})
 
 
 @login_required
@@ -102,7 +174,22 @@ def identity_verification_view(request):
             return redirect('vehicle_details')
     else:
         form = IdentityVerificationForm(instance=application)
-    return render(request, 'driver_app/identity_verification.html', {'form': form, 'application': application})
+    step_status = get_application_step_status(application, request.user)
+    current_step = 'identity_verification'
+    step_navigation = {
+        'step_map': [
+            {'key': 'account', 'label': 'Account', 'url_name': 'dashboard', 'completed': True},
+            {'key': 'personal_details', 'label': 'Personal', 'url_name': 'personal_details', 'completed': step_status['personal_details']},
+            {'key': 'identity_verification', 'label': 'Identity', 'url_name': 'identity_verification', 'completed': step_status['identity_verification']},
+            {'key': 'vehicle_details', 'label': 'Vehicle', 'url_name': 'vehicle_details', 'completed': step_status['vehicle_details']},
+            {'key': 'driver_documents', 'label': 'Driver Documents', 'url_name': 'driver_documents', 'completed': step_status['driver_documents']},
+            {'key': 'vehicle_documents', 'label': 'Vehicle Documents', 'url_name': 'vehicle_documents', 'completed': step_status['vehicle_documents']},
+            {'key': 'review_application', 'label': 'Review', 'url_name': 'review_application', 'completed': step_status['review_application']},
+        ],
+        'previous_step': {'key': 'personal_details', 'url_name': 'personal_details'},
+        'next_step': {'key': 'vehicle_details', 'url_name': 'vehicle_details'},
+    }
+    return render(request, 'driver_app/identity_verification.html', {'form': form, 'application': application, 'step_status': step_status, 'step_map': step_navigation['step_map'], 'current_step': current_step, 'previous_step': step_navigation['previous_step'], 'next_step': step_navigation['next_step']})
 
 
 @login_required
@@ -124,7 +211,22 @@ def vehicle_details_view(request):
             return redirect('driver_documents')
     else:
         form = VehicleForm(instance=vehicle)
-    return render(request, 'driver_app/vehicle_details.html', {'form': form, 'application': application})
+    step_status = get_application_step_status(application, request.user)
+    current_step = 'vehicle_details'
+    step_navigation = {
+        'step_map': [
+            {'key': 'account', 'label': 'Account', 'url_name': 'dashboard', 'completed': True},
+            {'key': 'personal_details', 'label': 'Personal', 'url_name': 'personal_details', 'completed': step_status['personal_details']},
+            {'key': 'identity_verification', 'label': 'Identity', 'url_name': 'identity_verification', 'completed': step_status['identity_verification']},
+            {'key': 'vehicle_details', 'label': 'Vehicle', 'url_name': 'vehicle_details', 'completed': step_status['vehicle_details']},
+            {'key': 'driver_documents', 'label': 'Driver Documents', 'url_name': 'driver_documents', 'completed': step_status['driver_documents']},
+            {'key': 'vehicle_documents', 'label': 'Vehicle Documents', 'url_name': 'vehicle_documents', 'completed': step_status['vehicle_documents']},
+            {'key': 'review_application', 'label': 'Review', 'url_name': 'review_application', 'completed': step_status['review_application']},
+        ],
+        'previous_step': {'key': 'identity_verification', 'url_name': 'identity_verification'},
+        'next_step': {'key': 'driver_documents', 'url_name': 'driver_documents'},
+    }
+    return render(request, 'driver_app/vehicle_details.html', {'form': form, 'application': application, 'step_status': step_status, 'step_map': step_navigation['step_map'], 'current_step': current_step, 'previous_step': step_navigation['previous_step'], 'next_step': step_navigation['next_step']})
 
 
 @login_required
@@ -152,7 +254,22 @@ def driver_documents_view(request):
             messages.error(request, 'Please select at least one document to upload.')
     else:
         form = DriverDocumentForm(application=application)
-    return render(request, 'driver_app/driver_documents.html', {'form': form, 'application': application})
+    step_status = get_application_step_status(application, request.user)
+    current_step = 'driver_documents'
+    step_navigation = {
+        'step_map': [
+            {'key': 'account', 'label': 'Account', 'url_name': 'dashboard', 'completed': True},
+            {'key': 'personal_details', 'label': 'Personal', 'url_name': 'personal_details', 'completed': step_status['personal_details']},
+            {'key': 'identity_verification', 'label': 'Identity', 'url_name': 'identity_verification', 'completed': step_status['identity_verification']},
+            {'key': 'vehicle_details', 'label': 'Vehicle', 'url_name': 'vehicle_details', 'completed': step_status['vehicle_details']},
+            {'key': 'driver_documents', 'label': 'Driver Documents', 'url_name': 'driver_documents', 'completed': step_status['driver_documents']},
+            {'key': 'vehicle_documents', 'label': 'Vehicle Documents', 'url_name': 'vehicle_documents', 'completed': step_status['vehicle_documents']},
+            {'key': 'review_application', 'label': 'Review', 'url_name': 'review_application', 'completed': step_status['review_application']},
+        ],
+        'previous_step': {'key': 'vehicle_details', 'url_name': 'vehicle_details'},
+        'next_step': {'key': 'vehicle_documents', 'url_name': 'vehicle_documents'},
+    }
+    return render(request, 'driver_app/driver_documents.html', {'form': form, 'application': application, 'step_status': step_status, 'step_map': step_navigation['step_map'], 'current_step': current_step, 'previous_step': step_navigation['previous_step'], 'next_step': step_navigation['next_step']})
 
 
 @login_required
@@ -185,7 +302,22 @@ def vehicle_documents_view(request):
             messages.error(request, 'Please select at least one document to upload.')
     else:
         form = VehicleDocumentForm(vehicle=vehicle)
-    return render(request, 'driver_app/vehicle_documents.html', {'form': form, 'application': application})
+    step_status = get_application_step_status(application, request.user)
+    current_step = 'vehicle_documents'
+    step_navigation = {
+        'step_map': [
+            {'key': 'account', 'label': 'Account', 'url_name': 'dashboard', 'completed': True},
+            {'key': 'personal_details', 'label': 'Personal', 'url_name': 'personal_details', 'completed': step_status['personal_details']},
+            {'key': 'identity_verification', 'label': 'Identity', 'url_name': 'identity_verification', 'completed': step_status['identity_verification']},
+            {'key': 'vehicle_details', 'label': 'Vehicle', 'url_name': 'vehicle_details', 'completed': step_status['vehicle_details']},
+            {'key': 'driver_documents', 'label': 'Driver Documents', 'url_name': 'driver_documents', 'completed': step_status['driver_documents']},
+            {'key': 'vehicle_documents', 'label': 'Vehicle Documents', 'url_name': 'vehicle_documents', 'completed': step_status['vehicle_documents']},
+            {'key': 'review_application', 'label': 'Review', 'url_name': 'review_application', 'completed': step_status['review_application']},
+        ],
+        'previous_step': {'key': 'driver_documents', 'url_name': 'driver_documents'},
+        'next_step': {'key': 'review_application', 'url_name': 'review_application'},
+    }
+    return render(request, 'driver_app/vehicle_documents.html', {'form': form, 'application': application, 'step_status': step_status, 'step_map': step_navigation['step_map'], 'current_step': current_step, 'previous_step': step_navigation['previous_step'], 'next_step': step_navigation['next_step']})
 
 
 @login_required
@@ -207,6 +339,22 @@ def review_application_view(request):
         'vehicle_documents': vehicle_documents,
         'form': form,
     }
+    step_status = get_application_step_status(application, request.user)
+    current_step = 'review_application'
+    step_navigation = {
+        'step_map': [
+            {'key': 'account', 'label': 'Account', 'url_name': 'dashboard', 'completed': True},
+            {'key': 'personal_details', 'label': 'Personal', 'url_name': 'personal_details', 'completed': step_status['personal_details']},
+            {'key': 'identity_verification', 'label': 'Identity', 'url_name': 'identity_verification', 'completed': step_status['identity_verification']},
+            {'key': 'vehicle_details', 'label': 'Vehicle', 'url_name': 'vehicle_details', 'completed': step_status['vehicle_details']},
+            {'key': 'driver_documents', 'label': 'Driver Documents', 'url_name': 'driver_documents', 'completed': step_status['driver_documents']},
+            {'key': 'vehicle_documents', 'label': 'Vehicle Documents', 'url_name': 'vehicle_documents', 'completed': step_status['vehicle_documents']},
+            {'key': 'review_application', 'label': 'Review', 'url_name': 'review_application', 'completed': step_status['review_application']},
+        ],
+        'previous_step': {'key': 'vehicle_documents', 'url_name': 'vehicle_documents'},
+        'next_step': None,
+    }
+    context.update({'step_status': step_status, 'step_map': step_navigation['step_map'], 'current_step': current_step, 'previous_step': step_navigation['previous_step'], 'next_step': step_navigation['next_step']})
     return render(request, 'driver_app/review_application.html', context)
 
 

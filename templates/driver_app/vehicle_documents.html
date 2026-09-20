@@ -2,13 +2,16 @@
 
 {% block content %}
 <div class="card p-4">
-    <div class="progress-indicator">
-        <span class="step-dot complete"></span> Account
-        <span class="step-dot complete"></span> Personal
-        <span class="step-dot complete"></span> Identity
-        <span class="step-dot complete"></span> Vehicle
-        <span class="step-dot complete"></span> Driver Documents
-        <span class="step-dot active"></span> Vehicle Documents
+    <div class="progress-indicator mb-4">
+        <div class="d-flex flex-wrap gap-2">
+            {% for step in step_map %}
+                {% if step.completed %}
+                    <a href="{% url step.url_name %}" class="btn btn-sm {% if step.key == current_step %}btn-primary{% else %}btn-outline-success{% endif %}">{{ step.label }}</a>
+                {% else %}
+                    <span class="btn btn-sm {% if step.key == current_step %}btn-primary active{% else %}btn-outline-secondary disabled{% endif %}">{{ step.label }}</span>
+                {% endif %}
+            {% endfor %}
+        </div>
     </div>
     <h2>Vehicle Documents</h2>
     <form method="post" enctype="multipart/form-data">
@@ -22,7 +25,8 @@
             </div>
             {% endfor %}
         </div>
-        <div class="mt-4 d-flex gap-2">
+        <div class="mt-4 d-flex justify-content-between align-items-center gap-2">
+            <a href="{% url 'driver_documents' %}" class="btn btn-outline-secondary">Previous</a>
             <button type="submit" class="btn btn-primary">Upload Document</button>
         </div>
     </form>
