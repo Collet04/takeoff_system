@@ -13,17 +13,21 @@ User = get_user_model()
 
 
 def send_verification_email(user, otp):
-    send_mail(
-        subject='Your TakeOFF verification code',
-        message=(
-            f'Hi {user.first_name},\n\n'
-            f'Your TakeOFF verification code is {otp.code}. '
-            'It expires in 5 minutes.\n\n'
-            'If you did not create this account, you can ignore this email.'
-        ),
-        from_email=None,
-        recipient_list=[user.email],
-    )
+    try:
+        send_mail(
+            subject='Your TakeOFF verification code',
+            message=(
+                f'Hi {user.first_name},\n\n'
+                f'Your TakeOFF verification code is {otp.code}. '
+                'It expires in 5 minutes.\n\n'
+                'If you did not create this account, you can ignore this email.'
+            ),
+            from_email=None,
+            recipient_list=[user.email],
+        )
+        return True
+    except Exception:
+        return False
 
 
 def landing_page(request):
@@ -55,9 +59,15 @@ def signup_view(request):
             user.save(update_fields=['phone_number'])
 
             otp = OTPVerification.generate_for_user(user)
-            send_verification_email(user, otp)
+            email_sent = send_verification_email(user, otp)
             request.session['pending_user_id'] = user.id
-            messages.success(request, 'Your account was created. Please verify your OTP code.')
+            if email_sent:
+                messages.success(request, 'Your account was created. Please verify your OTP code.')
+            else:
+                messages.warning(
+                    request,
+                    'Your account was created, but the verification email could not be sent. Please request a new code from the next screen.'
+                )
             return redirect('verify_otp')
     else:
         form = SignUpForm()
@@ -108,8 +118,10 @@ def resend_otp(request):
 
     OTPVerification.generate_for_user(user)
     otp = OTPVerification.objects.filter(user=user).order_by('-created_at').first()
-    send_verification_email(user, otp)
-    messages.info(request, 'A new verification code has been sent.')
+    if send_verification_email(user, otp):
+        messages.info(request, 'A new verification code has been sent.')
+    else:
+        messages.warning(request, 'A new verification code was generated, but the email could not be sent right now.')
     return redirect('verify_otp')
 
 
@@ -120,9 +132,11 @@ def login_view(request):
             user = form.get_user()
             if not user.is_active:
                 otp = OTPVerification.generate_for_user(user)
-                send_verification_email(user, otp)
+                if send_verification_email(user, otp):
+                    messages.info(request, 'Your account is not verified. We sent a new OTP to your email.')
+                else:
+                    messages.warning(request, 'Your account is not verified. A new verification code was generated, but the email could not be sent right now.')
                 request.session['pending_user_id'] = user.id
-                messages.info(request, 'Your account is not verified. We sent a new OTP to your email.')
                 return redirect('verify_otp')
 
             login(request, user)

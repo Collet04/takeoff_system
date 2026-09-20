@@ -426,8 +426,11 @@ def send_application_decision_email(application, decision, notes=''):
             'TakeOFF Team'
         )
 
-    send_mail(subject, message, None, [recipient], fail_silently=False)
-    return True
+    try:
+        send_mail(subject, message, None, [recipient], fail_silently=False)
+        return True
+    except Exception:
+        return False
 
 
 @admin_required

@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.test import TestCase
@@ -77,3 +79,17 @@ class AuthFlowTests(TestCase):
         self.assertRedirects(response, '/verify-otp/')
         self.assertTrue(self.client.session.get('pending_user_id'))
         self.assertEqual(len(mail.outbox), 1)
+
+    @patch('auth_app.views.send_mail', side_effect=Exception('SMTP failed'))
+    def test_signup_does_not_crash_when_email_send_fails(self, mock_send_mail):
+        response = self.client.post('/signup/', {
+            'first_name': 'NoMail',
+            'last_name': 'User',
+            'email': 'nomail.user@example.com',
+            'phone_number': '+263770000006',
+            'password1': 'StrongPass123',
+            'password2': 'StrongPass123',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(User.objects.filter(email='nomail.user@example.com').exists())
+        mock_send_mail.assert_called_once()
