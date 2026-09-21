@@ -1,3 +1,5 @@
+from typing import Any, cast
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
@@ -24,7 +26,6 @@ from .forms import (
     VehicleDocumentForm,
     VehicleForm,
 )
-from typing import Any
 
 from .models import DriverApplication, DriverDocument, DriverProfile, Vehicle, VehicleDocument
 
@@ -58,11 +59,23 @@ STEP_SEQUENCE = [
 ]
 
 
+def get_driver_documents(application):
+    application_obj = cast(Any, application)
+    related = cast(Any, application_obj).driver_documents
+    return list(cast(Any, related).all())
+
+
+def get_vehicle_documents(vehicle):
+    vehicle_obj = cast(Any, vehicle)
+    related = cast(Any, vehicle_obj).documents
+    return list(cast(Any, related).all())
+
+
 def get_application_step_status(application, user):
     profile = get_user_driver_profile(user)
     vehicle = get_application_vehicle(application)
-    driver_documents = list(getattr(application, 'driver_documents', []).all())
-    vehicle_documents = list(getattr(vehicle, 'documents', []).all()) if vehicle else []
+    driver_documents = get_driver_documents(application)
+    vehicle_documents = get_vehicle_documents(vehicle) if vehicle else []
 
     return {
         'account': True,
@@ -103,8 +116,15 @@ def build_step_navigation(current_step):
 
 # Pylance can misread Django reverse relations as missing; these local aliases keep the
 # access pattern explicit without changing runtime behavior.
+# These are intentionally lightweight type hints for the reverse relations used below.
 DriverDocuments = Any
 VehicleRelation = Any
+DocumentQuerySet = Any
+VehicleDocumentQuerySet = Any
+
+# Keep the model reverse relations explicit for static analysis.
+ApplicationDriverDocuments = Any
+VehicleDocumentsRelation = Any
 
 
 @login_required
@@ -342,8 +362,8 @@ def review_application_view(request):
     application = get_application_for_user(request.user)
     profile = get_user_driver_profile(request.user)
     vehicle: VehicleRelation = get_application_vehicle(application)
-    documents: DriverDocuments = list(application.driver_documents.all())
-    vehicle_documents = list(vehicle.documents.all()) if vehicle else []
+    documents: DriverDocuments = get_driver_documents(application)
+    vehicle_documents = get_vehicle_documents(vehicle) if vehicle else []
     form = ReviewConfirmationForm()
     context = {
         'application': application,
@@ -381,13 +401,17 @@ def submit_application(request):
     if request.method == 'POST':
         form = ReviewConfirmationForm(request.POST)
         if form.is_valid():
+            driver_docs = cast(Any, getattr(application, 'driver_documents', None))
+            vehicle_rel = cast(Any, getattr(application, 'vehicle', None))
+            vehicle_docs = cast(Any, getattr(vehicle_rel, 'documents', None)) if vehicle_rel else None
+
             required_docs = [
-                ("Driver's Licence", application.driver_documents.filter(document_type="Driver's Licence").exists()),
-                ('Proof of Address', application.driver_documents.filter(document_type='Proof of Address').exists()),
-                ('Driver Clearance', application.driver_documents.filter(document_type='Driver Clearance').exists()),
-                ('Vehicle Registration', application.vehicle.documents.filter(document_type='Vehicle Registration').exists() if application.vehicle else False),
-                ('Vehicle Insurance', application.vehicle.documents.filter(document_type='Vehicle Insurance').exists() if application.vehicle else False),
-                ('Vehicle Inspection', application.vehicle.documents.filter(document_type='Vehicle Inspection').exists() if application.vehicle else False),
+                ("Driver's Licence", driver_docs.filter(document_type="Driver's Licence").exists() if driver_docs is not None else False),
+                ('Proof of Address', driver_docs.filter(document_type='Proof of Address').exists() if driver_docs is not None else False),
+                ('Driver Clearance', driver_docs.filter(document_type='Driver Clearance').exists() if driver_docs is not None else False),
+                ('Vehicle Registration', vehicle_docs.filter(document_type='Vehicle Registration').exists() if vehicle_docs is not None else False),
+                ('Vehicle Insurance', vehicle_docs.filter(document_type='Vehicle Insurance').exists() if vehicle_docs is not None else False),
+                ('Vehicle Inspection', vehicle_docs.filter(document_type='Vehicle Inspection').exists() if vehicle_docs is not None else False),
             ]
             if not all(is_present for _, is_present in required_docs):
                 messages.error(request, 'Please upload all required driver and vehicle documents before submitting.')

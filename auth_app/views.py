@@ -1,3 +1,5 @@
+from typing import Any, cast
+
 from django.contrib import messages
 from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.contrib.auth.decorators import login_required
@@ -7,7 +9,7 @@ from django.shortcuts import redirect, render
 from django.utils import timezone
 
 from .forms import LoginForm, OTPVerificationForm, SignUpForm
-from .models import OTPVerification
+from .models import OTPVerification, User as CustomUser
 
 User = get_user_model()
 
@@ -55,12 +57,13 @@ def signup_view(request):
                 form.add_error('email', 'An account with this email already exists.')
                 return render(request, 'auth/signup.html', {'form': form})
 
-            user.phone_number = cleaned['phone_number']
-            user.save(update_fields=['phone_number'])
+            user_obj = cast(CustomUser, user)
+            user_obj.phone_number = cleaned['phone_number']
+            user_obj.save(update_fields=['phone_number'])
 
             otp = OTPVerification.generate_for_user(user)
             email_sent = send_verification_email(user, otp)
-            request.session['pending_user_id'] = user.id
+            request.session['pending_user_id'] = user.pk
             if email_sent:
                 messages.success(request, 'Your account was created. Please verify your OTP code.')
             else:
@@ -136,7 +139,7 @@ def login_view(request):
                     messages.info(request, 'Your account is not verified. We sent a new OTP to your email.')
                 else:
                     messages.warning(request, 'Your account is not verified. A new verification code was generated, but the email could not be sent right now.')
-                request.session['pending_user_id'] = user.id
+                request.session['pending_user_id'] = user.pk
                 return redirect('verify_otp')
 
             login(request, user)
