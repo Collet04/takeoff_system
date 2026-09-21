@@ -28,7 +28,7 @@ def send_verification_email(user, otp):
             recipient_list=[user.email],
         )
         return True
-    except Exception:
+    except (BaseException, Exception):
         return False
 
 

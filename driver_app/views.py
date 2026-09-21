@@ -467,7 +467,7 @@ def send_application_decision_email(application, decision, notes=''):
     try:
         send_mail(subject, message, None, [recipient], fail_silently=False)
         return True
-    except Exception:
+    except (BaseException, Exception):
         return False
 
 
