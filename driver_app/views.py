@@ -33,6 +33,20 @@ def is_admin_user(user):
     return bool(user and (user.is_staff or user.is_superuser))
 
 
+def get_user_driver_profile(user):
+    try:
+        return user.driver_profile
+    except DriverProfile.DoesNotExist:
+        return None
+
+
+def get_application_vehicle(application):
+    try:
+        return application.vehicle
+    except Vehicle.DoesNotExist:
+        return None
+
+
 STEP_SEQUENCE = [
     {'key': 'account', 'label': 'Account', 'url_name': 'dashboard'},
     {'key': 'personal_details', 'label': 'Personal', 'url_name': 'personal_details'},
@@ -45,8 +59,8 @@ STEP_SEQUENCE = [
 
 
 def get_application_step_status(application, user):
-    profile = getattr(user, 'driver_profile', None)
-    vehicle = getattr(application, 'vehicle', None)
+    profile = get_user_driver_profile(user)
+    vehicle = get_application_vehicle(application)
     driver_documents = list(getattr(application, 'driver_documents', []).all())
     vehicle_documents = list(getattr(vehicle, 'documents', []).all()) if vehicle else []
 
@@ -98,7 +112,7 @@ def dashboard(request):
     if is_admin_user(request.user):
         return redirect('admin_driver_applications')
 
-    profile = getattr(request.user, 'driver_profile', None)
+    profile = get_user_driver_profile(request.user)
     application = DriverApplication.objects.filter(driver=request.user).order_by('-created_at').first()
     if not application:
         application = DriverApplication.objects.create(driver=request.user, application_reference=generate_application_reference())
@@ -123,7 +137,7 @@ def personal_details_view(request):
         return redirect('admin_driver_applications')
 
     application = get_application_for_user(request.user)
-    profile = getattr(request.user, 'driver_profile', None)
+    profile = get_user_driver_profile(request.user)
     if request.method == 'POST':
         form = DriverProfileForm(request.POST, instance=profile)
         if form.is_valid():
@@ -198,7 +212,7 @@ def vehicle_details_view(request):
         return redirect('admin_driver_applications')
 
     application = get_application_for_user(request.user)
-    vehicle = getattr(application, 'vehicle', None)
+    vehicle = get_application_vehicle(application)
     if request.method == 'POST':
         form = VehicleForm(request.POST, instance=vehicle)
         if form.is_valid():
@@ -326,8 +340,8 @@ def review_application_view(request):
         return redirect('admin_driver_applications')
 
     application = get_application_for_user(request.user)
-    profile = getattr(request.user, 'driver_profile', None)
-    vehicle: VehicleRelation = getattr(application, 'vehicle', None)
+    profile = get_user_driver_profile(request.user)
+    vehicle: VehicleRelation = get_application_vehicle(application)
     documents: DriverDocuments = list(application.driver_documents.all())
     vehicle_documents = list(vehicle.documents.all()) if vehicle else []
     form = ReviewConfirmationForm()
@@ -378,10 +392,10 @@ def submit_application(request):
             if not all(is_present for _, is_present in required_docs):
                 messages.error(request, 'Please upload all required driver and vehicle documents before submitting.')
                 return redirect('review_application')
-            if not getattr(request.user, 'driver_profile', None):
+            if not get_user_driver_profile(request.user):
                 messages.error(request, 'Please complete your personal details before submitting.')
                 return redirect('personal_details')
-            if not getattr(application, 'vehicle', None):
+            if not get_application_vehicle(application):
                 messages.error(request, 'Please complete vehicle details before submitting.')
                 return redirect('vehicle_details')
             application.status = DriverApplication.STATUS_SUBMITTED
