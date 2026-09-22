@@ -124,7 +124,7 @@ def resend_otp(request):
     if send_verification_email(user, otp):
         messages.info(request, 'A new verification code has been sent.')
     else:
-        messages.warning(request, 'A new verification code was generated, but the email could not be sent right now.')
+        messages.warning(request, 'A new verification code was created. If you do not receive it within a few minutes, request another code.')
     return redirect('verify_otp')
 
 
@@ -138,7 +138,7 @@ def login_view(request):
                 if send_verification_email(user, otp):
                     messages.info(request, 'Your account is not verified. We sent a new OTP to your email.')
                 else:
-                    messages.warning(request, 'Your account is not verified. A new verification code was generated, but the email could not be sent right now.')
+                    messages.warning(request, 'Your account is not verified. A new verification code was created. If you do not receive it within a few minutes, request another code.')
                 request.session['pending_user_id'] = user.pk
                 return redirect('verify_otp')
 
