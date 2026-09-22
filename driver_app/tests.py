@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 
-from .forms import DriverDocumentForm, VehicleDocumentForm
+from .forms import DriverDocumentForm, IdentityVerificationForm, VehicleDocumentForm
 from .models import DriverApplication, DriverDocument, DriverProfile, Vehicle, VehicleDocument
 
 User = get_user_model()
@@ -31,6 +31,18 @@ class DriverOnboardingFlowTests(TestCase):
         response = self.client.get('/dashboard/')
         self.assertEqual(response.status_code, 302)
 
+    def test_identity_document_requires_pdf_upload(self):
+        form = IdentityVerificationForm(
+            data={
+                'identity_document_type': 'National ID',
+                'identity_document_number': 'ID-12345',
+            },
+            files={'identity_document_file': SimpleUploadedFile('identity.jpg', b'fake-image', content_type='image/jpeg')},
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn('PDF', str(form.errors['identity_document_file']))
+
     def test_driver_document_type_cannot_be_uploaded_twice(self):
         user = User.objects.create_user(
             username='driver@example.com',
@@ -54,6 +66,24 @@ class DriverOnboardingFlowTests(TestCase):
 
         self.assertFalse(form.is_valid())
         self.assertIn('already been uploaded', str(form.errors))
+
+    def test_driver_document_requires_pdf_upload(self):
+        form = DriverDocumentForm(
+            data={'document_type': "Driver's Licence"},
+            files={'drivers_licence': SimpleUploadedFile('license.png', b'fake-image', content_type='image/png')},
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn('PDF', str(form.errors['drivers_licence']))
+
+    def test_vehicle_document_requires_pdf_upload(self):
+        form = VehicleDocumentForm(
+            data={'document_type': 'Vehicle Registration'},
+            files={'vehicle_registration': SimpleUploadedFile('registration.jpg', b'fake-image', content_type='image/jpeg')},
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn('PDF', str(form.errors['vehicle_registration']))
 
     def test_vehicle_document_type_cannot_be_uploaded_twice(self):
         user = User.objects.create_user(

@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.utils import timezone
 
@@ -64,7 +65,12 @@ class DriverApplication(models.Model):
     identity_document_number = models.CharField(max_length=100, blank=True)
     issue_date = models.DateField(null=True, blank=True)
     expiry_date = models.DateField(null=True, blank=True)
-    identity_document_file = models.FileField(upload_to='identity_documents/', blank=True, null=True)
+    identity_document_file = models.FileField(
+        upload_to='identity_documents/',
+        blank=True,
+        null=True,
+        validators=[FileExtensionValidator(['pdf'])],
+    )
 
     @property
     def progress_steps(self):
@@ -134,7 +140,10 @@ class DriverDocument(models.Model):
 
     application = models.ForeignKey(DriverApplication, on_delete=models.CASCADE, related_name='driver_documents')
     document_type = models.CharField(max_length=100, choices=DOCUMENT_TYPES)
-    file = models.FileField(upload_to='driver_documents/')
+    file = models.FileField(
+        upload_to='driver_documents/',
+        validators=[FileExtensionValidator(['pdf'])],
+    )
     uploaded_at = models.DateTimeField(auto_now_add=True)
     verification_status = models.CharField(max_length=20, default='PENDING')
     review_notes = models.TextField(blank=True)
@@ -160,7 +169,10 @@ class VehicleDocument(models.Model):
 
     vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name='documents')
     document_type = models.CharField(max_length=100, choices=DOCUMENT_TYPES)
-    file = models.FileField(upload_to='vehicle_documents/')
+    file = models.FileField(
+        upload_to='vehicle_documents/',
+        validators=[FileExtensionValidator(['pdf'])],
+    )
     uploaded_at = models.DateTimeField(auto_now_add=True)
     verification_status = models.CharField(max_length=20, default='PENDING')
     review_notes = models.TextField(blank=True)

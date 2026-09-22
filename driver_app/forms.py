@@ -3,6 +3,21 @@ from django import forms
 from .models import DriverApplication, DriverDocument, DriverProfile, Vehicle, VehicleDocument
 
 
+def validate_pdf_upload(file):
+    if not file:
+        return file
+
+    filename = (getattr(file, 'name', '') or '').lower()
+    content_type = (getattr(file, 'content_type', '') or '').lower()
+
+    if content_type != 'application/pdf' and not filename.endswith('.pdf'):
+        raise forms.ValidationError('Only PDF files are allowed.')
+
+    if getattr(file, 'size', 0) > 5 * 1024 * 1024:
+        raise forms.ValidationError('File size must be 5MB or smaller.')
+    return file
+
+
 NATIONALITY_CHOICES = [
     ('Afghanistan', 'Afghanistan'),
     ('Albania', 'Albania'),
@@ -110,19 +125,12 @@ class IdentityVerificationForm(forms.ModelForm):
         widgets = {
             'issue_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'expiry_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
-            'identity_document_file': forms.FileInput(attrs={'class': 'form-control', 'accept': '.pdf,.jpg,.jpeg,.png'}),
+            'identity_document_file': forms.FileInput(attrs={'class': 'form-control', 'accept': '.pdf'}),
         }
 
     def clean_identity_document_file(self):
         file = self.cleaned_data.get('identity_document_file')
-        if not file:
-            return file
-        allowed_types = ['application/pdf', 'image/jpeg', 'image/png']
-        if file.content_type not in allowed_types:
-            raise forms.ValidationError('Only PDF, JPG, JPEG, and PNG files are allowed.')
-        if file.size > 5 * 1024 * 1024:
-            raise forms.ValidationError('File size must be 5MB or smaller.')
-        return file
+        return validate_pdf_upload(file)
 
 
 class VehicleForm(forms.ModelForm):
@@ -149,11 +157,11 @@ class DriverDocumentUploadForm(forms.Form):
     ]
 
     document_type = forms.ChoiceField(choices=DriverDocument.DOCUMENT_TYPES, required=False)
-    file = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control', 'accept': '.pdf,.jpg,.jpeg,.png'}))
-    drivers_licence = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control', 'accept': '.pdf,.jpg,.jpeg,.png'}))
-    proof_of_address = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control', 'accept': '.pdf,.jpg,.jpeg,.png'}))
-    driver_clearance = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control', 'accept': '.pdf,.jpg,.jpeg,.png'}))
-    additional_supporting_document = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control', 'accept': '.pdf,.jpg,.jpeg,.png'}))
+    file = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control', 'accept': '.pdf'}))
+    drivers_licence = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control', 'accept': '.pdf'}))
+    proof_of_address = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control', 'accept': '.pdf'}))
+    driver_clearance = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control', 'accept': '.pdf'}))
+    additional_supporting_document = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control', 'accept': '.pdf'}))
 
     def __init__(self, *args, **kwargs):
         self.application = kwargs.pop('application', None)
@@ -180,14 +188,7 @@ class DriverDocumentUploadForm(forms.Form):
 
     def clean_file(self):
         file = self.cleaned_data.get('file')
-        if not file:
-            return file
-        allowed_types = ['application/pdf', 'image/jpeg', 'image/png']
-        if file.content_type not in allowed_types:
-            raise forms.ValidationError('Only PDF, JPG, JPEG, and PNG files are allowed.')
-        if file.size > 5 * 1024 * 1024:
-            raise forms.ValidationError('File size must be 5MB or smaller.')
-        return file
+        return validate_pdf_upload(file)
 
     def clean_drivers_licence(self):
         return self._clean_uploaded_file('drivers_licence')
@@ -203,14 +204,7 @@ class DriverDocumentUploadForm(forms.Form):
 
     def _clean_uploaded_file(self, field_name):
         file = self.cleaned_data.get(field_name)
-        if not file:
-            return file
-        allowed_types = ['application/pdf', 'image/jpeg', 'image/png']
-        if file.content_type not in allowed_types:
-            raise forms.ValidationError('Only PDF, JPG, JPEG, and PNG files are allowed.')
-        if file.size > 5 * 1024 * 1024:
-            raise forms.ValidationError('File size must be 5MB or smaller.')
-        return file
+        return validate_pdf_upload(file)
 
 
 class VehicleDocumentUploadForm(forms.Form):
@@ -221,10 +215,10 @@ class VehicleDocumentUploadForm(forms.Form):
     ]
 
     document_type = forms.ChoiceField(choices=VehicleDocument.DOCUMENT_TYPES, required=False)
-    file = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control', 'accept': '.pdf,.jpg,.jpeg,.png'}))
-    vehicle_registration = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control', 'accept': '.pdf,.jpg,.jpeg,.png'}))
-    vehicle_insurance = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control', 'accept': '.pdf,.jpg,.jpeg,.png'}))
-    vehicle_inspection = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control', 'accept': '.pdf,.jpg,.jpeg,.png'}))
+    file = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control', 'accept': '.pdf'}))
+    vehicle_registration = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control', 'accept': '.pdf'}))
+    vehicle_insurance = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control', 'accept': '.pdf'}))
+    vehicle_inspection = forms.FileField(required=False, widget=forms.FileInput(attrs={'class': 'form-control', 'accept': '.pdf'}))
 
     def __init__(self, *args, **kwargs):
         self.vehicle = kwargs.pop('vehicle', None)
@@ -251,14 +245,7 @@ class VehicleDocumentUploadForm(forms.Form):
 
     def clean_file(self):
         file = self.cleaned_data.get('file')
-        if not file:
-            return file
-        allowed_types = ['application/pdf', 'image/jpeg', 'image/png']
-        if file.content_type not in allowed_types:
-            raise forms.ValidationError('Only PDF, JPG, JPEG, and PNG files are allowed.')
-        if file.size > 5 * 1024 * 1024:
-            raise forms.ValidationError('File size must be 5MB or smaller.')
-        return file
+        return validate_pdf_upload(file)
 
     def clean_vehicle_registration(self):
         return self._clean_uploaded_file('vehicle_registration')
@@ -271,14 +258,7 @@ class VehicleDocumentUploadForm(forms.Form):
 
     def _clean_uploaded_file(self, field_name):
         file = self.cleaned_data.get(field_name)
-        if not file:
-            return file
-        allowed_types = ['application/pdf', 'image/jpeg', 'image/png']
-        if file.content_type not in allowed_types:
-            raise forms.ValidationError('Only PDF, JPG, JPEG, and PNG files are allowed.')
-        if file.size > 5 * 1024 * 1024:
-            raise forms.ValidationError('File size must be 5MB or smaller.')
-        return file
+        return validate_pdf_upload(file)
 
 
 class DriverDocumentForm(DriverDocumentUploadForm):
