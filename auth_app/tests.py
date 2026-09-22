@@ -1,8 +1,12 @@
+from datetime import timedelta
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.test import TestCase
+from django.utils import timezone
+
+from .models import OTPVerification
 
 User = get_user_model()
 
@@ -79,6 +83,26 @@ class AuthFlowTests(TestCase):
         self.assertRedirects(response, '/verify-otp/')
         self.assertTrue(self.client.session.get('pending_user_id'))
         self.assertEqual(len(mail.outbox), 1)
+
+    def test_verification_page_shows_otp_alert_for_a_short_time(self):
+        user = User.objects.create_user(
+            username='otpalert@example.com',
+            email='otpalert@example.com',
+            password='StrongPass123',
+            is_active=False,
+        )
+        otp = OTPVerification.objects.create(
+            user=user,
+            code='123456',
+            expires_at=timezone.now() + timedelta(days=1),
+        )
+        self.client.session['pending_user_id'] = user.pk
+        self.client.session.save()
+
+        response = self.client.get('/verify-otp/')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '123456')
+        self.assertContains(response, 'OTP')
 
     @patch('auth_app.views.send_mail', side_effect=Exception('SMTP failed'))
     def test_signup_does_not_crash_when_email_send_fails(self, mock_send_mail):

@@ -107,7 +107,12 @@ def verify_otp_view(request):
     else:
         form = OTPVerificationForm()
 
-    return render(request, 'auth/verify_otp.html', {'form': form, 'user': user})
+    context = {
+        'form': form,
+        'user': user,
+        'otp_code': latest_otp.code if latest_otp else None,
+    }
+    return render(request, 'auth/verify_otp.html', context)
 
 
 def resend_otp(request):
